@@ -40,8 +40,8 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 
 			const fileName = file.originalname.toLowerCase().replace(/[^a-z0-9-.]/g, '-').replace(/((.jpeg)$|(.jpg)$|(.png)$)/, '')
 			// TODO: sadece png ve jpg kabul ediyoruz. User webp veya avif gonderebilir. 
-			const extension = file.mimetype == 'image/png' ? '.webp' : '.avif'
-			const mimetype = file.mimetype == 'image/png' ? 'image/webp' : 'image/avif'
+			const extension = file.mimetype == 'image/png' ? '.png' : '.jpg'
+			const mimetype = file.mimetype == 'image/png' ? 'image/png' : 'image/jpeg'
 			const imageId = new ObjectId()
 			const zamanDamga = new Date().toISOString().split('.')[0].replace(/-|:|T/g, '')
 			const s3UploadFileBasePath = `${s3Folder}${imageId.toString()}_${fileName}_t${zamanDamga}`
@@ -58,7 +58,7 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 				alt: alt || file.originalname,
 				size: mainImgData.info.size,
 				tags: tags,
-				mimetype: file.mimetype == 'image/png' ? 'image/webp' : 'image/avif',
+				mimetype: file.mimetype == 'image/png' ? 'image/png' : 'image/jpeg',
 				fit: fit,
 				// img800: { src: `${process.env.AWS_S3_PUBLIC_URI}/${s3UploadFileBasePath}_w800${extension}`, width: 800, height: 800 },
 				// img400: { src: `${process.env.AWS_S3_PUBLIC_URI}/${s3UploadFileBasePath}_w400${extension}`, width: 400, height: 400 },
@@ -143,11 +143,13 @@ function convertSmallImages(mimetype, buf, fit = 'contain', width = null, height
 		let srp = null
 		let result = null
 		if (mimetype == 'image/png') {
-			srp = sharp(buf).webp({ nearLossless: true, }).withExifMerge(imageWithExif)
+			srp = sharp(buf).png({}).withExifMerge(imageWithExif)
+			//.webp({ nearLossless: true, }).withExifMerge(imageWithExif)
 			result = await srp.withMetadata().resize(width, height, { fit: fit }).toBuffer({ resolveWithObject: true })
-			result.info.mimetype = 'image/webp'
+			result.info.mimetype = 'image/png'
 		} else {
-			srp = sharp(buf).avif({ lossless: true }).withExifMerge(imageWithExif)
+			srp = sharp(buf).jpeg({}).withExifMerge(imageWithExif)
+			// .avif({ lossless: true }).withExifMerge(imageWithExif)
 			result = await srp.withMetadata().resize(width, height, { fit: fit }).toBuffer({ resolveWithObject: true })
 			result.info.mimetype = 'image/avif'
 		}
@@ -161,14 +163,14 @@ function convertMainImage(mimetype, buf) {
 		let srp = null
 		let result = null
 		if (mimetype == 'image/png') {
-			srp = sharp(buf).withMetadata().webp({ nearLossless: true, }).withExifMerge(imageWithExif)
+			srp = sharp(buf).withMetadata().png({}).withExifMerge(imageWithExif)
 			result = await srp.toBuffer({ resolveWithObject: true })
 			// result = await srp.composite([{
 			// 	input: path.join(__dirname, 'watermark-w150.png'),
 			// }]).toBuffer({ resolveWithObject: true })
 		} else {
 			// srp = sharp(buf).withMetadata().avif({}).withExifMerge(imageWithExif)
-			srp = sharp(buf).avif({}).withExifMerge(imageWithExif)
+			srp = sharp(buf).jpeg({}).withExifMerge(imageWithExif)
 			result = await srp.rotate().toBuffer({ resolveWithObject: true })
 			// result = await srp.composite([{
 			// 	input: path.join(__dirname, 'watermark-w300.png'),

@@ -45,7 +45,6 @@ function changePassword(dbModel, sessionDoc, req) {
 			.save()
 			.then(() => resolve(`your password has been changed successfuly`))
 			.catch(reject)
-
 	})
 }
 
@@ -54,15 +53,15 @@ function getMyProfile(dbModel, sessionDoc, req) {
 		try {
 			let doc = await dbModel.users.findOne({ _id: sessionDoc.user })
 				.select('-password')
-
 			if (doc) {
 				let obj = doc.toJSON()
-				obj.session = {
-					sessionId: sessionDoc._id,
-					lang: sessionDoc.lang,
-					db: sessionDoc.db,
-					dbList: sessionDoc.dbList,
+				if ((obj.profilePicture || '').length == 24) {
+					obj.profilePicture = `${process.env.PUBLIC_URL}/api/v1/s3/image/show/${obj.profilePicture}/${req.query.w || 400}`
 				}
+				// obj.session = {
+				// 	sessionId: sessionDoc._id,
+
+				// }
 
 				resolve(obj)
 			} else
@@ -80,23 +79,14 @@ function updateMyProfile(dbModel, sessionDoc, req) {
 			return reject('oturuma ait kullanıcı bulunamadı')
 		let data = req.body || {}
 		delete data._id
-		delete data.password
-		delete data.role
-		delete data.passive
-		delete data.createdDate
-		delete data.modifiedDate
-		delete data.fullName
-
+		console.log(data)
 		let newDoc = Object.assign(doc, data)
 		if (!epValidateSync(newDoc, reject)) return
 
-		newDoc.fullName = (doc.firstName || '') + ' ' + (doc.lastName || '')
 		newDoc.save()
-			.then((doc2) => {
-				doc2.populate('image')
-				let obj = doc2.toJSON()
+			.then(newDoc => {
+				let obj = newDoc.toJSON()
 				delete obj.password
-
 				resolve(obj)
 			})
 			.catch(reject)

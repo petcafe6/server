@@ -34,9 +34,6 @@ module.exports = function (dbModel) {
 				size: { type: Number, default: 0 },
 			},
 			tags: { type: String, index: true },
-			createdDate: { type: Date, default: Date.now },
-			// uploading:{type:Boolean, default:true},
-			// uploadingStatusCounter:{type:Number, default:0},
 		},
 		{ versionKey: false, timestamps: true }
 	)

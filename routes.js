@@ -32,12 +32,8 @@ module.exports = (app) => {
   })
 
   authControllers(app, '/api/v1/auth/:func/:param1/:param2/:param3')
-  sessionControllers(app, '/api/v1/session/:func/:param1/:param2/:param3')
-  adminAuthControllers(app, '/api/v1/admin/auth/:func/:param1/:param2/:param3')
-  adminControllers(app, '/api/v1/admin/:func/:param1/:param2/:param3')
+  s3ImageControllers(app, '/api/v1/s3/image/:func/:param1/:param2/:param3')
   s3Controllers(app, '/api/v1/s3/:func/:param1/:param2/:param3')
-  repoControllers(app, '/api/v1/repo/:func/:param1/:param2/:param3')
-  reportsControllers(app, '/api/v1/reports/:func/:param1/:param2/:param3')
   masterControllers(app, '/api/v1/:func/:param1/:param2/:param3')
 
 
@@ -50,28 +46,13 @@ module.exports = (app) => {
   })
 }
 
-function adminAuthControllers(app, route) {
+function s3ImageControllers(app, route) {
   setRoutes(app, route, (req, res, next) => {
-    const ctl = getController('/admin/auth', req.params.func)
-    let spam = spamCheck(req.IP)
-    if (!spam) {
-      if (ctl) {
-        ctl(req)
-          .then((data) => {
-            if (data == undefined) res.json({ success: true })
-            else if (data == null) res.json({ success: true })
-            else {
-              res.status(200).json({
-                success: true,
-                data: data,
-              })
-            }
-          })
-          .catch(next)
-      } else next()
-    } else {
-      next(`Suspicious login attempts. Try again after ${spam} seconds.`)
-    }
+    const ctl = getController('/s3/image', req.params.func)
+    if (ctl) {
+      ctl(db, req, res)
+
+    } else next()
   })
 }
 
@@ -100,29 +81,6 @@ function authControllers(app, route) {
   })
 }
 
-function sessionControllers(app, route) {
-  setRoutes(app, route, (req, res, next) => {
-    const ctl = getController('/session', req.params.func)
-    if (ctl) {
-      passport(req)
-        .then((sessionDoc) => {
-          ctl(db, sessionDoc, req)
-            .then((data) => {
-              if (data == undefined) res.json({ success: true })
-              else if (data == null) res.json({ success: true })
-              else {
-                res.status(200).json({ success: true, data: data })
-              }
-            })
-            .catch(next)
-        })
-        .catch((err) => {
-          res.status(401).json({ success: false, error: err })
-        })
-    } else next()
-  })
-}
-
 
 function masterControllers(app, route) {
   setRoutes(app, route, (req, res, next) => {
@@ -130,77 +88,6 @@ function masterControllers(app, route) {
     if (ctl) {
       passport(req)
         .then((sessionDoc) => {
-          ctl(db, sessionDoc, req)
-            .then((data) => {
-              if (data == undefined) res.json({ success: true })
-              else if (data == null) res.json({ success: true })
-              else {
-                res.status(200).json({ success: true, data: data })
-              }
-            })
-            .catch(next)
-        })
-        .catch((err) => {
-          res.status(401).json({ success: false, error: err })
-        })
-    } else next()
-  })
-}
-
-function reportsControllers(app, route) {
-  setRoutes(app, route, (req, res, next) => {
-    const ctl = getController('/reports', req.params.func)
-    if (ctl) {
-      passport(req)
-        .then((sessionDoc) => {
-          ctl(db, sessionDoc, req)
-            .then((data) => {
-              if (data == undefined) res.json({ success: true })
-              else if (data == null) res.json({ success: true })
-              else {
-                res.status(200).json({ success: true, data: data })
-              }
-            })
-            .catch(next)
-        })
-        .catch((err) => {
-          res.status(401).json({ success: false, error: err })
-        })
-    } else next()
-  })
-}
-
-function repoControllers(app, route) {
-  setRoutes(app, route, (req, res, next) => {
-    const ctl = getController('/repo', req.params.func)
-    if (ctl) {
-      passport(req)
-        .then((sessionDoc) => {
-          if (!sessionDoc) {
-            return reject('Unauthorized operation. {token} is empty. Please log in again.')
-          }
-          ctl(db, sessionDoc, req)
-            .then((data) => {
-              if (data == undefined) res.json({ success: true })
-              else if (data == null) res.json({ success: true })
-              else {
-                res.status(200).json({ success: true, data: data })
-              }
-            })
-            .catch(next)
-        })
-        .catch((err) => {
-          res.status(401).json({ success: false, error: err })
-        })
-    } else next()
-  })
-}
-function adminControllers(app, route) {
-  setRoutes(app, route, (req, res, next) => {
-    const ctl = getController('/admin', req.params.func)
-    if (ctl) {
-      adminPassport(req)
-        .then(sessionDoc => {
           ctl(db, sessionDoc, req)
             .then((data) => {
               if (data == undefined) res.json({ success: true })
@@ -323,14 +210,14 @@ function passport(req) {
   return new Promise((resolve, reject) => {
     let token = req.getValue('token')
     if (token) {
-      token = token.split('AABI_')[1]
+      token = token.split('USER_')[1]
       auth
         .verify(token)
         .then((decoded) => {
+
           db.sessions
             .findOne({ _id: decoded.sessionId })
             .then((sessionDoc) => {
-
               if (sessionDoc) {
                 if (sessionDoc.closed) {
                   reject('session closed')

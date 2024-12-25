@@ -3,13 +3,13 @@ module.exports = function (dbModel) {
   const schema = mongoose.Schema(
     {
       name: { type: String, required: true },
-      username: { type: String, default: null, index: true },
+      username: { type: String, unique: true },
       email: { type: String, default: null, index: true },
       phoneNumber: { type: String, default: null, index: true },
       password: { type: String, default: null, index: true },
       role: { type: String, enum: ['pet_owner', 'business'], default: 'pet_owner' },
       profilePicture: { type: String },
-      gender: { type: String, default: '', enum: ['', 'male', 'female', 'other'] },
+      gender: { type: String, default: '-', enum: ['', '-', 'male', 'female', 'other'] },
       dateOfBirth: { type: String, default: '2000-01-01', min: 10, max: 10 },
       bio: { type: String, default: '' },
       location: { type: String, default: '', index: true }
