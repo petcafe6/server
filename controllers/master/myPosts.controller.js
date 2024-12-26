@@ -30,7 +30,7 @@ function getOne(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			if (!req.params.param1) return reject(`param1 required`)
-			dbModel.pets.findOne({ _id: req.params.param1, deleted: false })
+			dbModel.posts.findOne({ _id: req.params.param1 })
 				.then(resolve)
 				.catch(reject)
 
@@ -48,10 +48,9 @@ function getList(dbModel, sessionDoc, req) {
 				limit: req.query.pageSize || 50,
 			}
 			let filter = {
-				owner: sessionDoc.user,
-				deleted: false
+				author: sessionDoc.user
 			}
-			dbModel.pets.paginate(filter, options)
+			dbModel.posts.paginate(filter, options)
 				.then(resolve)
 				.catch(reject)
 
@@ -67,12 +66,14 @@ function post(dbModel, sessionDoc, req) {
 			let data = req.body || {}
 
 			delete data._id
-			if (!data.name) return reject(`name required`)
+			delete data.comments
+			delete data.likes
+			delete data.hashTags
+			delete data.mentions
+			delete data.author
 
-			if (await dbModel.pets.countDocuments({ owner: sessionDoc.user, name: data.name, deleted: false }) > 0)
-				return reject(`name already exists`)
-			data.owner = sessionDoc.user
-			const newDoc = new dbModel.pets(data)
+			data.author = sessionDoc.user
+			const newDoc = new dbModel.posts(data)
 
 			newDoc.save()
 				.then(resolve)
@@ -89,15 +90,17 @@ function put(dbModel, sessionDoc, req) {
 			if (!req.params.param1) return reject(`param1 required`)
 			let data = req.body || {}
 			delete data._id
-			delete data.owner
-			if (!data.name) return reject(`name required`)
-			if (await dbModel.pets.countDocuments({ owner: sessionDoc.user, name: data.name, deleted: false, _id: { $ne: req.params.param1 } }) > 0)
-				return reject(`name already exists`)
-			let doc = await dbModel.pets.findOne({ _id: req.params.param1, owner: sessionDoc.user })
-			if (!doc) return reject(`pet not found`)
+			delete data.comments
+			delete data.likes
+			delete data.hashTags
+			delete data.mentions
+			delete data.author
+
+
+			let doc = await dbModel.posts.findOne({ _id: req.params.param1, author: sessionDoc.user })
+			if (!doc) return reject(`post not found`)
 
 			Object.assign(doc, data)
-			console.log(data)
 			doc.save()
 				.then(resolve)
 				.catch(reject)
@@ -111,9 +114,8 @@ function deleteItem(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			if (!req.params.param1) return reject(`param1 required`)
-			dbModel.pets.updateOne({
-				_id: req.params.param1, deleted: false, owner: sessionDoc.user
-			}, { $set: { deleted: true, deletedAt: new Date() } })
+			dbModel.posts
+				.deleteOne({ _id: req.params.param1, author: sessionDoc.user })
 				.then(resolve)
 				.catch(reject)
 		} catch (err) {
