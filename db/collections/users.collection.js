@@ -6,17 +6,20 @@ module.exports = function (dbModel) {
       username: { type: String, unique: true },
       email: { type: String, default: null, index: true },
       phoneNumber: { type: String, default: null, index: true },
-      password: { type: String, default: null, index: true },
+      password: { type: String, default: null, index: true, select: false },
       role: { type: String, enum: ['pet_owner', 'business'], default: 'pet_owner' },
       profilePicture: { type: String },
       gender: { type: String, default: '-', enum: ['', '-', 'male', 'female', 'other'] },
       dateOfBirth: { type: String, default: '2000-01-01', min: 10, max: 10 },
       bio: { type: String, default: '' },
-      location: { type: String, default: '', index: true }
+      location: { type: String, default: '', index: true },
       // location: {
       //   type: { type: String, enum: ['point'], required: false, default: 'point' },
       //   coordinates: { type: [Number], required: false }, // [longitude, latitude]
       // },
+      followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
+      following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
+
     },
     { versionKey: false, timestamps: true }
   )

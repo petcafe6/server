@@ -32,14 +32,17 @@ function changePassword(dbModel, sessionDoc, req) {
 		let newPassword = req.getValue('newPassword')
 
 
-		if (!oldPassword) return reject('old password required')
+
 		if (!newPassword) return reject('new password required')
 		if (newPassword.length < 8) return reject('password must be at least 8 characters')
 		let userDoc = await dbModel.users.findOne({ _id: sessionDoc.user })
-
-		if ((userDoc.password || '') != oldPassword) {
-			return reject(`incorrect old password`)
+		if (userDoc.password) {
+			if (!oldPassword) return reject('old password required')
+			if ((userDoc.password || '') != oldPassword) {
+				return reject(`incorrect old password`)
+			}
 		}
+
 		userDoc.password = newPassword
 		userDoc
 			.save()
@@ -52,12 +55,19 @@ function getMyProfile(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let doc = await dbModel.users.findOne({ _id: sessionDoc.user })
-				.select('-password')
+			// .select('-password')
 			if (doc) {
 				let obj = doc.toJSON()
 				if ((obj.profilePicture || '').length == 24) {
 					obj.profilePicture = `${process.env.PUBLIC_URL}/api/v1/s3/image/show/${obj.profilePicture}/${req.query.w || 400}`
 				}
+				obj.followerCount = (obj.followers || []).length
+				obj.followingCount = (obj.following || []).length
+				obj.postCount = await dbModel.posts.countDocuments({ user: doc._id })
+
+				delete obj.followers
+				delete obj.following
+
 				// obj.session = {
 				// 	sessionId: sessionDoc._id,
 
