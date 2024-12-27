@@ -31,16 +31,22 @@ function like(dbModel, sessionDoc, req) {
 			if (!req.params.param2) return reject(`param1 required`)
 			let doc = await dbModel.posts.findOne({ _id: req.params.param2 })
 			if (!doc) return reject(`post not found`)
-			const index = doc.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString())
-			if (index > -1) {
-				doc.likes.splice(index, 1)
+			let oldStatus = false
+			if (await dbModel.posts_likes.countDocuments({ post: doc._id, likedBy: sessionDoc.user }) > 0) {
+				oldStatus = true
+				await dbModel.posts_likes.deleteOne({ post: doc._id, likedBy: sessionDoc.user })
+				if (doc.likeCount > 0) doc.likeCount--
 			} else {
-				doc.likes.push(sessionDoc.user)
+				oldStatus = false
+				const likeDoc = new dbModel.posts_likes({ post: doc._id, likedBy: sessionDoc.user })
+				await likeDoc.save()
+				doc.likeCount++
 			}
+
 			doc.save()
 				.then(doc => {
 					let obj = doc.toJSON()
-					obj.liked = obj.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+					obj.liked = !oldStatus
 					resolve(obj)
 				})
 				.catch(reject)
@@ -55,10 +61,18 @@ function getOne(dbModel, sessionDoc, req) {
 		try {
 			if (!req.params.param1) return reject(`param1 required`)
 			dbModel.posts.findOne({ _id: req.params.param1 })
-				.then(doc => {
+				.populate([{
+					path: 'author',
+					select: '_id name username role profilePicture location'
+				}])
+				.then(async doc => {
 					if (doc) {
 						let obj = doc.toJSON()
-						obj.liked = obj.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+						if (await dbModel.posts_likes.countDocuments({ post: doc._id, likedBy: sessionDoc.user }) > 0) {
+							obj.liked = true
+						} else {
+							obj.liked = false
+						}
 						resolve(obj)
 					} else {
 						reject(`post not found`)
@@ -88,11 +102,16 @@ function getList(dbModel, sessionDoc, req) {
 
 			}
 			dbModel.posts.paginate(filter, options)
-				.then(result => {
-					result.docs = result.docs.map(e => {
-						e.liked = e.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
-						return e
-					})
+				.then(async result => {
+					let i = 0
+					while (i < result.docs.length) {
+						if (await dbModel.posts_likes.countDocuments({ post: result.docs[i]._id, likedBy: sessionDoc.user }) > 0) {
+							result.docs[i].liked = true
+						} else {
+							result.docs[i].liked = false
+						}
+						i++
+					}
 					resolve(result)
 				})
 				.catch(reject)

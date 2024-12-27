@@ -5,15 +5,11 @@ module.exports = function (dbModel) {
       author: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true },
       content: { type: String, required: true, index: true },
       images: [{ type: mongoose.Schema.Types.ObjectId, ref: 's3images' }],
-      likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }], // Beğenen kullanıcılar
-      comments: [{
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
-        text: { type: String },
-        createdAt: { type: Date, default: Date.now }
-      }],
-      hashTags: [{ type: String, required: true, index: true }],
-      mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
-      location: { type: String, default: '', index: true }
+      hashtags: [{ type: String, required: true, index: true }],
+      mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users', index: true }],
+      location: { type: String, default: '', index: true },
+      likeCount: { type: Number, default: 0, index: true },
+      commentCount: { type: Number, default: 0, index: true },
     },
     { versionKey: false, timestamps: true }
   )
