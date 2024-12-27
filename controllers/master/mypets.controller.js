@@ -46,6 +46,7 @@ function getList(dbModel, sessionDoc, req) {
 			let options = {
 				page: req.query.page || 1,
 				limit: req.query.pageSize || 50,
+				sort: { _id: -1 }
 			}
 			let filter = {
 				owner: sessionDoc.user,

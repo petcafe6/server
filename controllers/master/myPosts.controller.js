@@ -31,7 +31,15 @@ function getOne(dbModel, sessionDoc, req) {
 		try {
 			if (!req.params.param1) return reject(`param1 required`)
 			dbModel.posts.findOne({ _id: req.params.param1 })
-				.then(resolve)
+				.then(doc => {
+					if (doc) {
+						let obj = doc.toJSON()
+						obj.liked = obj.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+						resolve(obj)
+					} else {
+						reject(`post not found`)
+					}
+				})
 				.catch(reject)
 
 		} catch (err) {
@@ -46,12 +54,19 @@ function getList(dbModel, sessionDoc, req) {
 			let options = {
 				page: req.query.page || 1,
 				limit: req.query.pageSize || 50,
+				sort: { _id: -1 }
 			}
 			let filter = {
 				author: sessionDoc.user
 			}
 			dbModel.posts.paginate(filter, options)
-				.then(resolve)
+				.then(result => {
+					result.docs = result.docs.map(e => {
+						e.liked = e.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+						return e
+					})
+					resolve(result)
+				})
 				.catch(reject)
 
 		} catch (err) {
@@ -76,7 +91,11 @@ function post(dbModel, sessionDoc, req) {
 			const newDoc = new dbModel.posts(data)
 
 			newDoc.save()
-				.then(resolve)
+				.then(doc => {
+					let obj = doc.toJSON()
+					obj.liked = obj.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+					resolve(obj)
+				})
 				.catch(reject)
 		} catch (err) {
 			reject(err)
@@ -102,7 +121,11 @@ function put(dbModel, sessionDoc, req) {
 
 			Object.assign(doc, data)
 			doc.save()
-				.then(resolve)
+				.then(doc => {
+					let obj = doc.toJSON()
+					obj.liked = obj.likes.findIndex(usr => usr.toString() === sessionDoc.user.toString()) > -1 ? true : false
+					resolve(obj)
+				})
 				.catch(reject)
 		} catch (err) {
 			reject(err)
