@@ -4,6 +4,8 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 			case 'GET':
 				if (req.params.param2 == 'comments' && req.params.param1) {
 					getComments(dbModel, sessionDoc, req).then(resolve).catch(reject)
+				} else if (req.params.param2 == 'likedUsers' && req.params.param1) {
+					getLikedUsers(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				} else if (req.params.param1) {
 					getOne(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				} else {
@@ -30,6 +32,34 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 		reject(err)
 	}
 })
+
+function getLikedUsers(dbModel, sessionDoc, req) {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let options = {
+				page: req.query.page || 1,
+				limit: req.query.pageSize || 50,
+				sort: { _id: -1 },
+				populate: [{
+					path: 'likedBy',
+					select: '_id name username role profilePicture location'
+				}]
+			}
+			let filter = {
+				post: req.params.param1
+			}
+			dbModel.posts_likes.paginate(filter, options)
+				.then(async result => {
+
+					resolve(result)
+				})
+				.catch(reject)
+
+		} catch (err) {
+			reject(err)
+		}
+	})
+}
 
 function getComments(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
