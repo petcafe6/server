@@ -14,7 +14,9 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 				break
 
 			case 'POST':
-				if (req.params.param2 == 'like' && req.params.param1) {
+				if (req.params.param2 == 'save' && req.params.param1) {
+					savePost(dbModel, sessionDoc, req).then(resolve).catch(reject)
+				} else if (req.params.param2 == 'like' && req.params.param1) {
 					like(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				} else if (req.params.param2 == 'addNewComment' && req.params.param1) {
 					addNewComment(dbModel, sessionDoc, req).then(resolve).catch(reject)
@@ -32,6 +34,27 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 		reject(err)
 	}
 })
+
+function savePost(dbModel, sessionDoc, req) {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let doc = await dbModel.posts.findOne({ _id: req.params.param1 })
+			if (!doc) return reject(`post not found`)
+			if (await dbModel.posts_saved.countDocuments({ post: doc._id, user: sessionDoc.user }) > 0) {
+				await dbModel.posts_saved.deleteOne({ post: doc._id, user: sessionDoc.user })
+			} else {
+				const newDoc = new dbModel.posts_saved({ post: doc._id, user: sessionDoc.user })
+				await newDoc.save()
+			}
+
+			getOne(dbModel, sessionDoc, req).then(resolve).catch(reject)
+		} catch (err) {
+			reject(err)
+		}
+	})
+}
+
+
 
 function getLikedUsers(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
@@ -167,6 +190,11 @@ function getOne(dbModel, sessionDoc, req) {
 						} else {
 							obj.liked = false
 						}
+						if (await dbModel.posts_saved.countDocuments({ post: doc._id, user: sessionDoc.user }) > 0) {
+							obj.saved = true
+						} else {
+							obj.saved = false
+						}
 						resolve(obj)
 					} else {
 						reject(`post not found`)
@@ -203,6 +231,11 @@ function getList(dbModel, sessionDoc, req) {
 							result.docs[i].liked = true
 						} else {
 							result.docs[i].liked = false
+						}
+						if (await dbModel.posts_saved.countDocuments({ post: result.docs[i]._id, user: sessionDoc.user }) > 0) {
+							result.docs[i].saved = true
+						} else {
+							result.docs[i].saved = false
 						}
 						i++
 					}
