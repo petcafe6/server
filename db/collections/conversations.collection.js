@@ -4,12 +4,12 @@ module.exports = function (dbModel) {
     {
       type: { type: String, enum: ['direct', 'group'], required: true }, // 'direct' veya 'group'
       participants: [
-        { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true }
+        { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true }
       ], // Bireysel konuşmalarda kullanıcılar
-      group: { type: mongoose.Schema.Types.ObjectId, ref: 'groups', default: null }, // Grup konuşmaları için grup referansı
-      messages: [
-        { type: mongoose.Schema.Types.ObjectId, ref: 'messages' } // Mesajlar
-      ],
+      group: { type: mongoose.Schema.Types.ObjectId, ref: 'groups', default: null, index: true }, // Grup konuşmaları için grup referansı
+      // messages: [
+      //   { type: mongoose.Schema.Types.ObjectId, ref: 'messages' } // Mesajlar
+      // ],
     },
     { versionKey: false, timestamps: true }
   )

@@ -2,10 +2,10 @@ const collectionName = path.basename(__filename, '.collection.js')
 module.exports = function (dbModel) {
   const schema = mongoose.Schema(
     {
-      sender: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true }, // Mesajı gönderen
-      conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'conversations', required: true }, // Bağlı olduğu konuşma
+      sender: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true }, // Mesajı gönderen
+      conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'conversations', required: true, index: true }, // Bağlı olduğu konuşma
       content: { type: String, default: null }, // Mesaj içeriği
-      media: { type: String, default: null }, // Medya dosyasının URL'si
+      media: [{ type: mongoose.Schema.Types.ObjectId, ref: 's3images' }],
       isSystemMessage: { type: Boolean, default: false }, // Sistem mesajı (örn. birinin gruba katılması)
       isReadBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
     },
