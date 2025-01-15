@@ -5,7 +5,7 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 				if (req.params.param1) {
 					getMessages(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				} else {
-					getList(dbModel, sessionDoc, req).then(resolve).catch(reject)
+					getConversations(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				}
 
 				break
@@ -13,7 +13,15 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 			case 'POST':
 				post(dbModel, sessionDoc, req).then(resolve).catch(reject)
 				break
-
+			case 'DELETE':
+				if (req.params.param1 == 'deleteMessage' && req.params.param2) {
+					deleteMessage(dbModel, sessionDoc, req).then(resolve).catch(reject)
+				} else if (req.params.param1 == 'deleteConversation' && req.params.param2) {
+					deleteConversation(dbModel, sessionDoc, req).then(resolve).catch(reject)
+				} else {
+					reject(`param1 and param2 required`)
+				}
+				break
 			default:
 				restError.method(req, reject)
 				break
@@ -23,9 +31,47 @@ module.exports = (dbModel, sessionDoc, req) => new Promise(async (resolve, rejec
 	}
 })
 
+function deleteMessage(dbModel, sessionDoc, req) {
+	return new Promise(async (resolve, reject) => {
+		try {
+			if (await dbModel.messages.countDocuments({ _id: req.params.param2, sender: sessionDoc.user }) == 0)
+				return reject(`message not found`)
+			dbModel.messages
+				.deleteOne({ _id: req.params.param2, sender: sessionDoc.user })
+				.then(resolve)
+				.catch(reject)
+
+		} catch (err) {
+			reject(err)
+		}
+	})
+}
+function deleteConversation(dbModel, sessionDoc, req) {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let conversationDoc = await dbModel.conversations.findOne({
+				_id: req.params.param2,
+				participants: { $all: [sessionDoc.user] },
+				type: 'direct'
+			})
+			if (!conversationDoc) return reject(`conversation not found`)
+
+			await dbModel.messages.deleteMany({ conversation: conversationDoc._id }, { multi: true })
+			dbModel.conversations
+				.deleteOne({ _id: conversationDoc._id })
+				.then(resolve)
+				.catch(reject)
+
+		} catch (err) {
+			reject(err)
+		}
+	})
+}
+
 function getMessages(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
 		try {
+			const conversationDoc = await dbModel.conversations.findOne({ _id: req.params.param1 })
 			let options = {
 				page: req.query.page || 1,
 				limit: req.query.pageSize || 50,
@@ -98,7 +144,7 @@ function post(dbModel, sessionDoc, req) {
 
 
 
-function getList(dbModel, sessionDoc, req) {
+function getConversations(dbModel, sessionDoc, req) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let options = {
@@ -118,7 +164,21 @@ function getList(dbModel, sessionDoc, req) {
 			}
 			dbModel.conversations.paginate(filter, options)
 				.then(async result => {
-
+					let i = 0
+					while (i < result.docs.length) {
+						let e = result.docs[i]
+						if (e.type == 'direct') {
+							if (e.participants.length > 1) {
+								if (e.participants[0]._id.toString() == sessionDoc.user) {
+									e.user = e.participants[1]
+								} else {
+									e.user = e.participants[0]
+								}
+							}
+						}
+						result.docs[i] = e
+						i++
+					}
 					resolve(result)
 				})
 				.catch(reject)

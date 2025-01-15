@@ -4,7 +4,7 @@ module.exports = function (dbModel) {
     {
       name: { type: String, required: true }, // Grup adı
       description: { type: String, default: '' }, // Grup açıklaması
-      image: { type: String, default: null }, // Grup profil fotoğrafı
+      image: { type: mongoose.Schema.Types.ObjectId, ref: 's3images', default: null }, // Grup profil fotoğrafı
       admins: [
         { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true } // Grup yöneticileri
       ],
