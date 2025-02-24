@@ -134,3 +134,13 @@ exports.magicLinkLogin = async function (req, email) {
 		}
 	})
 }
+
+exports.generateUsername = async function (name, index = 0) {
+	return new Promise((resolve, reject) => {
+		try {
+
+		} catch (err) {
+			reject(err)
+		}
+	})
+}

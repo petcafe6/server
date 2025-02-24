@@ -68,23 +68,38 @@ function deleteConversation(dbModel, sessionDoc, req) {
 	})
 }
 
-function getMessages(dbModel, sessionDoc, req) {
+function getMessages(dbModel, sessionDoc, req, conversationId) {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const conversationDoc = await dbModel.conversations.findOne({ _id: req.params.param1 })
+			const conversationDoc = await dbModel.conversations
+				.findOne({ _id: conversationId || req.params.param1 })
+				.populate([{
+					path: 'participants',
+					select: '_id name username role profilePicture location'
+				}, { path: 'group' }])
+			if (!conversationDoc) return reject(`conversation not found`)
 			let options = {
 				page: req.query.page || 1,
-				limit: req.query.pageSize || 50,
+				limit: req.query.pageSize || 5,
 				sort: { _id: -1 },
 				populate: [{
 					path: 'sender',
 					select: '_id name username role profilePicture location'
 				}]
 			}
-			let filter = { conversation: req.params.param1 }
+			let filter = { conversation: conversationId || req.params.param1 }
 			dbModel.messages.paginate(filter, options)
 				.then(async result => {
-
+					result.conversation = conversationDoc.toJSON()
+					if (conversationDoc.type == 'direct') {
+						if (conversationDoc.participants.length > 1) {
+							if (conversationDoc.participants[0]._id.toString() == sessionDoc.user) {
+								result.conversation.user = conversationDoc.participants[1]
+							} else {
+								result.conversation.user = conversationDoc.participants[0]
+							}
+						}
+					}
 					resolve(result)
 				})
 				.catch(reject)
@@ -135,6 +150,12 @@ function post(dbModel, sessionDoc, req) {
 				.save()
 				.then(resolve)
 				.catch(reject)
+			// .then(result => {
+			// 	getMessages(dbModel, sessionDoc, req, conversationDoc._id)
+			// 		.then(resolve)
+			// 		.catch(reject)
+			// })
+			// .catch(reject)
 
 		} catch (err) {
 			reject(err)
